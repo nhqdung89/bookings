@@ -208,23 +208,52 @@ el.dataset.index = i;
 </script>
 
 
-
 </div>
-<div id="popup" style="display:none; position:fixed; top:20%; left:50%; transform:translateX(-50%);
-background:#fff; padding:20px; border:1px solid #ccc; z-index:999;">
+<!-- POPUP MỚI - ĐẸP VÀ CHUYÊN NGHIỆP -->
+<div id="popup">
+  <div class="popup-overlay"></div>
+  <div class="popup-card" id="popupCard">
+    <button class="popup-close" onclick="closePopup()">✕</button>
+    
+    <h2 class="popup-title">Chi tiết bàn <span id="popupBanTitle"></span></h2>
 
-  <input type="hidden" id="id">
+    <div class="popup-form">
+      <input type="hidden" id="id">
 
-  <div>Bàn: <input id="ban"></div>
-  <div>Tên: <input id="ten"></div>
-  <div>Giờ: <input id="gio"></div>
-  <div>Số khách: <input id="sokhach"></div>
-  <div>Ghi chú: <input id="ghichu"></div>
+      <div class="input-row">
+        <div class="input-group">
+          <input type="text" id="ban" readonly>
+          <label>Bàn số</label>
+        </div>
+        <div class="input-group">
+          <input type="text" id="ten" placeholder=" ">
+          <label>Tên khách *</label>
+        </div>
+      </div>
 
-  <br>
-  <button onclick="save()">💾 Lưu</button>
-  <button onclick="remove()">🗑 Xoá</button>
-  <button onclick="closePopup()">❌ Đóng</button>
+      <div class="input-row">
+        <div class="input-group">
+          <input type="text" id="gio" placeholder=" ">
+          <label>Giờ (HH:mm) *</label>
+        </div>
+        <div class="input-group">
+          <input type="number" id="sokhach" placeholder=" ">
+          <label>Số khách</label>
+        </div>
+      </div>
+
+      <div class="input-group full">
+        <input type="text" id="ghichu" placeholder=" ">
+        <label>Ghi chú</label>
+      </div>
+    </div>
+
+    <div class="popup-buttons">
+      <button class="btn btn-delete" onclick="remove()">🗑 Xóa</button>
+      <button class="btn btn-cancel" onclick="closePopup()">Hủy</button>
+      <button class="btn btn-save" onclick="save()">💾 Lưu</button>
+    </div>
+  </div>
 </div>
 <script type="module">
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -266,46 +295,49 @@ async function loadData() {
   }
 
 async function openPopup(ban) {
-  document.getElementById("popup").style.display = "block";
+  const el = document.querySelector(`[data-ban="${ban}"]`);
+  const popup = document.getElementById("popup");
+  const card = document.getElementById("popupCard");
 
-  try {
-    const { data, error } = await supabaseClient
-      .from("bookings")
-      .select("*")
-      .eq("ban", ban)
-      .maybeSingle();  // ← thay single() bằng maybeSingle()
+  // Load dữ liệu cũ (giữ nguyên logic của cậu)
+  const { data } = await supabaseClient
+    .from("bookings")
+    .select("*")
+    .eq("ban", ban)
+    .maybeSingle();
 
-    if (error) {
-      console.error("Query error:", error);
-      throw error;
-    }
+  document.getElementById("id").value = data?.id || "";
+  document.getElementById("ban").value = ban;
+  document.getElementById("ten").value = data?.ten || "";
+  document.getElementById("gio").value = data?.gio ? data.gio.slice(0,5) : "";
+  document.getElementById("sokhach").value = data?.sokhach || "";
+  document.getElementById("ghichu").value = data?.ghichu || "";
 
-    if (data) {
-      // Có booking → điền dữ liệu vào form
-      document.getElementById("id").value     = data.id     || "";
-      document.getElementById("ban").value    = data.ban    || ban;
-      document.getElementById("ten").value    = data.ten    || "";
-      document.getElementById("gio").value    = data.gio    || "";
-      document.getElementById("sokhach").value = data.sokhach || "";
-      document.getElementById("ghichu").value = data.ghichu || "";
-    } else {
-      // Không có booking → form trống, sẵn sàng tạo mới
-      document.getElementById("id").value     = "";
-      document.getElementById("ban").value    = ban;
-      document.getElementById("ten").value    = "";
-      document.getElementById("gio").value    = "";
-      document.getElementById("sokhach").value = "";
-      document.getElementById("ghichu").value = "";
-    }
-  } catch (err) {
-    console.error("Open popup lỗi:", err);
-    alert("Lỗi khi mở popup: " + (err.message || "Không xác định"));
-  }
+  document.getElementById("popupBanTitle").textContent = ban;
+
+  // === TÍNH TOÁN VỊ TRÍ POPUP GẦN BÀN ===
+  const rect = el.getBoundingClientRect();
+  let left = rect.left + window.scrollX + 80;
+  let top = rect.top + window.scrollY - 20;
+
+  // Tránh tràn ra ngoài màn hình
+  if (left + 440 > window.innerWidth) left = rect.right + window.scrollX - 460;
+  if (top + 380 > window.innerHeight) top = rect.bottom + window.scrollY - 400;
+
+  card.style.left = left + "px";
+  card.style.top = top + "px";
+
+  popup.style.display = "block";
+  setTimeout(() => popup.classList.add("show"), 10);
 }
 
-  function closePopup() {
-    document.getElementById("popup").style.display = "none";
-  }
+function closePopup() {
+  const popup = document.getElementById("popup");
+  popup.classList.remove("show");
+  setTimeout(() => {
+    popup.style.display = "none";
+  }, 300);
+}
 
   async function save() {
     const id = document.getElementById("id").value.trim();
@@ -365,6 +397,126 @@ supabaseClient.from("bookings").select("count").then(({ data, error }) => {
   }
 });
 
+  /* POPUP CHUYÊN NGHIỆP */
+#popup {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 9999;
+}
+
+.popup-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+}
+
+.popup-card {
+  position: absolute;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+  width: 420px;
+  max-width: 92%;
+  padding: 28px 24px 20px;
+  animation: popupPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes popupPop {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.popup-close {
+  position: absolute;
+  top: 12px; right: 16px;
+  font-size: 28px;
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+}
+
+.popup-title {
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 24px 0;
+  color: #1f2937;
+}
+
+.input-row {
+  display: flex;
+  gap: 12px;
+}
+
+.input-group {
+  position: relative;
+  flex: 1;
+  margin-bottom: 20px;
+}
+
+.input-group.full { flex: 100%; }
+
+.input-group input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 16px;
+  transition: all 0.25s;
+}
+
+.input-group input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+}
+
+.input-group label {
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  font-size: 15px;
+  color: #6b7280;
+  transition: all 0.25s;
+  pointer-events: none;
+}
+
+.input-group input:focus + label,
+.input-group input:not(:placeholder-shown) + label {
+  top: -10px;
+  left: 12px;
+  font-size: 13px;
+  background: white;
+  padding: 0 6px;
+  color: #6366f1;
+}
+
+.popup-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-save   { background: #22c55e; color: white; }
+.btn-delete { background: #ef4444; color: white; }
+.btn-cancel { background: #6b7280; color: white; }
+
+.btn:hover { transform: translateY(-2px); }
+  
 /* ===== STATE ===== */
 let selected = [];
 let history = [];
