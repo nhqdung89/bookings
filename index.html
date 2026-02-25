@@ -299,7 +299,7 @@ async function openPopup(ban) {
   const popup = document.getElementById("popup");
   const card = document.getElementById("popupCard");
 
-  // Load dữ liệu cũ (giữ nguyên logic của cậu)
+  // Load dữ liệu cũ
   const { data } = await supabaseClient
     .from("bookings")
     .select("*")
@@ -315,17 +315,24 @@ async function openPopup(ban) {
 
   document.getElementById("popupBanTitle").textContent = ban;
 
-  // === TÍNH TOÁN VỊ TRÍ POPUP GẦN BÀN ===
-  const rect = el.getBoundingClientRect();
-  let left = rect.left + window.scrollX + 80;
-  let top = rect.top + window.scrollY - 20;
+  // Tính vị trí popup gần bàn
+  if (el) {
+    const rect = el.getBoundingClientRect();
+    let left = rect.left + window.scrollX + 80;
+    let top = rect.top + window.scrollY - 20;
 
-  // Tránh tràn ra ngoài màn hình
-  if (left + 440 > window.innerWidth) left = rect.right + window.scrollX - 460;
-  if (top + 380 > window.innerHeight) top = rect.bottom + window.scrollY - 400;
+    // Tránh tràn màn hình
+    if (left + 440 > window.innerWidth) left = rect.right + window.scrollX - 460;
+    if (top + 380 > window.innerHeight) top = rect.bottom + window.scrollY - 400;
 
-  card.style.left = left + "px";
-  card.style.top = top + "px";
+    card.style.left = left + "px";
+    card.style.top = top + "px";
+  } else {
+    // Nếu không tìm thấy bàn, hiện giữa màn hình
+    card.style.left = "50%";
+    card.style.top = "50%";
+    card.style.transform = "translate(-50%, -50%)";
+  }
 
   popup.style.display = "block";
   setTimeout(() => popup.classList.add("show"), 10);
@@ -338,7 +345,7 @@ function closePopup() {
     popup.style.display = "none";
   }, 300);
 }
-
+  
   async function save() {
     const id = document.getElementById("id").value.trim();
     const data = {
