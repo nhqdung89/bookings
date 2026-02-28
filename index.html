@@ -219,22 +219,31 @@ body { font-family: Arial; background:#f1f2f6; }
   <button onclick="clearSearch()">Reset</button>
 </div>
 
-<button onclick="exportTables()" style="
-position:fixed;
-top:10px;
-right:10px;
-z-index:999;
-padding:10px 15px;
-font-size:16px;
-font-weight:bold;
-background:#2d3436;
-color:#fff;
-border:none;
-border-radius:6px;
-cursor:pointer;
+<button onclick="exportTables()" id="exportBtn" style="
+  position:fixed;
+  top:10px;
+  right:10px;
+  z-index:999;
+  padding:10px 15px;
+  font-size:16px;
+  font-weight:bold;
+  background:#2d3436;
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
 ">
-Xuất tọa độ
+  Xuất tọa độ
 </button>
+
+<style>
+  @media (max-width: 768px) {  /* ẩn trên điện thoại và tablet */
+    #exportBtn {
+      display: none !important;
+    }
+  }
+</style>
+  
 <!-- POPUP -->
 <div id="popup">
   <div class="popup-overlay"></div>
