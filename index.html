@@ -28,6 +28,11 @@ body { font-family: Arial; background:#f1f2f6; }
   font-size:16px;
   font-weight:bold;
   background:white;
+  /* ←←← VÔ HIỆU HÓA LỆNH TRÌNH DUYỆT */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 .table.selected {
   outline: 4px solid red;
@@ -857,7 +862,7 @@ function clearSearch(){
 window.searchTable = searchTable;
 window.clearSearch = clearSearch;
 
-// ================== LONG PRESS ON MOBILE TO OPEN POPUP ==================
+// ================== LONG PRESS MOBILE - KHÔNG CÒN “CHỌN TẤT CẢ” ==================
 let pressTimer = null;
 
 document.addEventListener('touchstart', function(e) {
@@ -865,9 +870,10 @@ document.addEventListener('touchstart', function(e) {
   if (!el) return;
 
   pressTimer = setTimeout(() => {
+    e.preventDefault();           // Ngăn menu mặc định
     openPopup(el.dataset.ban);
-  }, 600); // nhấn giữ 0.6 giây
-}, { passive: true });
+  }, 650); // nhấn giữ 0.65 giây (có thể chỉnh 600 hoặc 700)
+}, { passive: false });
 
 document.addEventListener('touchend', function() {
   if (pressTimer) {
@@ -880,6 +886,13 @@ document.addEventListener('touchmove', function() {
   if (pressTimer) {
     clearTimeout(pressTimer);
     pressTimer = null;
+  }
+});
+
+// Ngăn hoàn toàn context menu (Chọn tất cả, Copy…)
+document.addEventListener('contextmenu', function(e) {
+  if (e.target.closest(".table")) {
+    e.preventDefault();
   }
 });
 </script>
