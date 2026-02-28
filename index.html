@@ -872,7 +872,7 @@ document.addEventListener('touchstart', function(e) {
   pressTimer = setTimeout(() => {
     e.preventDefault();           // Ngăn menu mặc định
     openPopup(el.dataset.ban);
-  }, 650); // nhấn giữ 0.65 giây (có thể chỉnh 600 hoặc 700)
+  }, 400); // nhấn giữ 0.65 giây (có thể chỉnh 600 hoặc 700)
 }, { passive: false });
 
 document.addEventListener('touchend', function() {
