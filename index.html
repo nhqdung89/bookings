@@ -218,7 +218,26 @@ body { font-family: Arial; background:#f1f2f6; }
   >
   <button onclick="clearSearch()">Reset</button>
 </div>
-
+<div style="position:fixed; top:10px; left:10px; z-index:999; display:flex; gap:8px; align-items:center;">
+  <input 
+    type="text" 
+    id="searchInput" 
+    placeholder="Tìm tên / bàn / giờ..." 
+    oninput="searchTable()"
+    style="padding:8px; width:220px; font-size:14px;"
+  >
+  
+  <!-- NÚT CHỌN NGÀY -->
+  <input 
+    type="date" 
+    id="datePicker" 
+    onchange="changeDate()"
+    style="padding:8px; font-size:14px; border-radius:6px; border:1px solid #ccc;"
+  >
+  
+  <button onclick="setToday()" style="padding:8px 12px; font-size:14px;">Hôm nay</button>
+</div>
+  
 <!-- NÚT XUẤT TỌA ĐỘ - ẨN TRÊN ĐIỆN THOẠI -->
 <button onclick="exportTables()" id="exportBtn" style="
   position:fixed;
@@ -256,7 +275,7 @@ Xuất tọa độ
     <div class="popup-form">
       <input type="hidden" id="id">
 
-      <div class="input-row">
+         <div class="input-row">
         <div class="input-group">
           <input type="text" id="ban" readonly>
           <label>Bàn số</label>
@@ -265,6 +284,12 @@ Xuất tọa độ
           <input type="text" id="ten" placeholder=" ">
           <label>Tên khách *</label>
         </div>
+      </div>
+
+      <!-- Ô NGÀY -->
+      <div class="input-group full">
+        <input type="date" id="ngay" style="padding:14px 16px; font-size:16px;">
+        <label>Ngày</label>
       </div>
 
       <!-- TIME PICKER 3 CỘT CUỘN - LABEL Ở TRÊN -->
@@ -431,18 +456,27 @@ supabaseClient
   .subscribe();
   console.log("✅ Supabase đã load thành công!");
 
+// ================== CHỌN NGÀY ==================
+  window.changeDate = function() {
+    currentDate = document.getElementById("datePicker").value;
+    loadData();
+  };
+
+  window.setToday = function() {
+    currentDate = new Date().toISOString().split('T')[0];
+    document.getElementById("datePicker").value = currentDate;
+    loadData();
+  };
+  
     // ================== HÀM OPENPOPUP CUỐI CÙNG (ĐÃ SỬA) ==================
-  async function openPopup(ban) {
-  console.log("=== OPENPOPUP + TIME PICKER ===", ban);
-
+async function openPopup(ban) {
   const popup = document.getElementById("popup");
-  const card = document.getElementById("popupCard");
 
-  // Load dữ liệu
   const { data } = await supabaseClient
     .from("bookings")
     .select("*")
     .eq("ban", ban)
+    .eq("ngay", currentDate)   // chỉ lấy theo ngày đang chọn
     .maybeSingle();
 
   document.getElementById("id").value = data?.id || "";
@@ -451,14 +485,14 @@ supabaseClient
   document.getElementById("sokhach").value = data?.sokhach || "";
   document.getElementById("ghichu").value = data?.ghichu || "";
 
-  document.getElementById("popupBanTitle").textContent = ban;
+  // === SET NGÀY MẶC ĐỊNH ===
+  document.getElementById("ngay").value = data?.ngay || currentDate;
 
-  // ================== KHỞI TẠO TIME PICKER ==================
+  // === SET GIỜ MẶC ĐỊNH 19:00:00 ===
   const hourSelect   = document.getElementById("hour");
   const minuteSelect = document.getElementById("minute");
   const secondSelect = document.getElementById("second");
 
-  // Populate giờ 00-23
   hourSelect.innerHTML = "";
   for (let i = 0; i <= 23; i++) {
     const opt = document.createElement("option");
@@ -466,8 +500,6 @@ supabaseClient
     opt.textContent = opt.value;
     hourSelect.appendChild(opt);
   }
-
-  // Populate phút & giây 00-59
   [minuteSelect, secondSelect].forEach(sel => {
     sel.innerHTML = "";
     for (let i = 0; i <= 59; i++) {
@@ -478,20 +510,18 @@ supabaseClient
     }
   });
 
-  // Load giờ cũ (nếu có)
   if (data?.gio) {
     const [h, m, s] = data.gio.split(":");
-    hourSelect.value   = h || "00";
+    hourSelect.value   = h || "19";
     minuteSelect.value = m || "00";
     secondSelect.value = s || "00";
   } else {
-    // Mặc định hiện giờ hiện tại
-    const now = new Date();
-    hourSelect.value   = now.getHours().toString().padStart(2, '0');
-    minuteSelect.value = now.getMinutes().toString().padStart(2, '0');
-    secondSelect.value = now.getSeconds().toString().padStart(2, '0');
+    hourSelect.value   = "19";
+    minuteSelect.value = "00";
+    secondSelect.value = "00";
   }
 
+  document.getElementById("popupBanTitle").textContent = ban;
   popup.style.display = "block";
   setTimeout(() => popup.classList.add("show"), 10);
 }
@@ -502,9 +532,13 @@ supabaseClient
 // Các hàm async dùng supabase
 // ──────────────────────────────────────────────
 /* ===== LOADDATA ===== */
-async function loadData() {
+  async function loadData() {
     try {
-      const { data, error } = await supabaseClient.from("bookings").select("*");
+      const { data, error } = await supabaseClient
+        .from("bookings")
+        .select("*")
+        .eq("ngay", currentDate);
+
       if (error) throw error;
 
       document.querySelectorAll(".table").forEach(t => {
@@ -517,10 +551,6 @@ async function loadData() {
         if (!el) return;
         
         el.classList.add("booked");
-        if (row.status === 'vip') el.classList.add("vip");
-        if (row.status === 'arrived') el.classList.add("arrived");
-
-        // Chỉ hiển thị HH:mm cho gọn
         let displayTime = row.gio ? row.gio.slice(0, 5) : '—';
 
         el.innerHTML = `
@@ -533,7 +563,6 @@ async function loadData() {
       console.error("Load bookings lỗi:", err);
     }
   }
-
     
   function closePopup() {
     const popup = document.getElementById("popup");
@@ -543,7 +572,8 @@ async function loadData() {
     }, 350);
   }
 
-  async function save() {
+  
+async function save() {
   const id = document.getElementById("id").value.trim();
 
   const hour   = document.getElementById("hour").value;
@@ -553,14 +583,14 @@ async function loadData() {
   const data = {
     ban:     document.getElementById("ban").value.trim(),
     ten:     document.getElementById("ten").value.trim(),
-    gio:     `${hour}:${minute}:${second}`,   // ← lưu full HH:mm:ss
+    gio:     `${hour}:${minute}:${second}`,
     sokhach: document.getElementById("sokhach").value.trim(),
     ghichu:  document.getElementById("ghichu").value.trim(),
+    ngay:    document.getElementById("ngay").value   // ← LƯU NGÀY TỪ Ô INPUT
   };
 
-  // validate
   if (!data.ten) return alert("Vui lòng nhập tên khách!");
-  if (!data.gio) return alert("Vui lòng chọn giờ!");
+  if (!data.ngay) return alert("Vui lòng chọn ngày!");
 
   try {
     if (id) {
@@ -575,7 +605,6 @@ async function loadData() {
     alert("Lưu thất bại: " + err.message);
   }
 }
-
   async function remove() {
     const id = document.getElementById("id").value.trim();
     if (!id) return;
@@ -884,6 +913,9 @@ if (isMobile) {
 }
 
 // Giữ nguyên double click cho máy tính (không ảnh hưởng)
+// Load ban đầu
+  document.getElementById("datePicker").value = currentDate;
+  loadData();
 </script>
 </body>
 </html>
