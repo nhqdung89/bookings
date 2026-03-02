@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>Xỉn - Bookings</title>
-
+  
+<!-- FIX LỖI FAVICON 404 -->
+<link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  
 <style>
 body { font-family: Arial; background:#f1f2f6; }
 
@@ -238,29 +241,34 @@ body { font-family: Arial; background:#f1f2f6; }
   <button onclick="setToday()" style="padding:8px 12px; font-size:14px;">Hôm nay</button>
 </div>
   
-<!-- NÚT XUẤT TỌA ĐỘ - ẨN TRÊN ĐIỆN THOẠI -->
-<button onclick="exportTables()" id="exportBtn" style="
-  position:fixed;
-  top:10px;
-  right:10px;
-  z-index:999;
-  padding:10px 15px;
-  font-size:16px;
-  font-weight:bold;
-  background:#2d3436;
-  color:#fff;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-">
-Xuất tọa độ
-</button>
+<!-- LOGO XỈN + NÚT XUẤT TỌA ĐỘ (ẨN TRÊN ĐIỆN THOẠI) -->
+<div style="position:fixed; top:10px; right:10px; z-index:999; display:flex; align-items:center; gap:12px;">
+  
+  <!-- Logo Xỉn -->
+  <img 
+    src="https://drive.google.com/file/d/1gKM0DB4P08N7doqs0e6xzauFnKnmpi2J/view" 
+    alt="Xỉn Logo" 
+    style="width:80px; height:auto; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.2);"
+  >
+
+  <!-- Nút Xuất tọa độ (ẩn trên điện thoại) -->
+  <button onclick="exportTables()" id="exportBtn" style="
+    padding:10px 15px;
+    font-size:16px;
+    font-weight:bold;
+    background:#2d3436;
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+  ">
+    Xuất tọa độ
+  </button>
+</div>
 
 <style>
   @media (max-width: 768px) {
-    #exportBtn {
-      display: none !important;
-    }
+    #exportBtn { display: none !important; }
   }
 </style>
   
