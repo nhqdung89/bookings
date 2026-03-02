@@ -211,62 +211,49 @@ body { font-family: Arial; background:#f1f2f6; }
 </head>
 
 <body>
-<div style="position:fixed; top:10px; left:10px; z-index:999;">
+<!-- ================== HEADER MỚI (SẠCH - KHÔNG CHỒNG) ================== -->
+<div style="position:fixed; top:10px; left:10px; right:10px; z-index:999; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+
+  <!-- Ô tìm kiếm -->
   <input 
     type="text" 
     id="searchInput" 
     placeholder="Tìm tên / bàn / giờ..." 
     oninput="searchTable()"
-    style="padding:8px; width:220px; font-size:14px;"
-  >
-  <button onclick="clearSearch()">Reset</button>
-</div>
-<div style="position:fixed; top:10px; left:10px; z-index:999; display:flex; gap:8px; align-items:center;">
-  <input 
-    type="text" 
-    id="searchInput" 
-    placeholder="Tìm tên / bàn / giờ..." 
-    oninput="searchTable()"
-    style="padding:8px; width:220px; font-size:14px;"
-  >
-  
-  <!-- NÚT CHỌN NGÀY -->
-  <input 
-    type="date" 
-    id="datePicker" 
-    onchange="changeDate()"
-    style="padding:8px; font-size:14px; border-radius:6px; border:1px solid #ccc;"
-  >
-  
-  <button onclick="setToday()" style="padding:8px 12px; font-size:14px;">Hôm nay</button>
-</div>
-  
-<!-- LOGO XỈN + NÚT XUẤT TỌA ĐỘ (ẨN TRÊN ĐIỆN THOẠI) -->
-<div style="position:fixed; top:10px; right:10px; z-index:999; display:flex; align-items:center; gap:12px;">
-  
-  <!-- Logo Xỉn -->
-  <img 
-    src="https://drive.google.com/file/d/1gKM0DB4P08N7doqs0e6xzauFnKnmpi2J/view?usp=sharing" 
-    alt="Xỉn Logo" 
-    style="width:80px; height:auto; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.2);"
+    style="padding:8px; flex:1; min-width:200px; font-size:14px; border-radius:6px;"
   >
 
-  <!-- Nút Xuất tọa độ (ẩn trên điện thoại) -->
-  <button onclick="exportTables()" id="exportBtn" style="
-    padding:10px 15px;
-    font-size:16px;
-    font-weight:bold;
-    background:#2d3436;
-    color:#fff;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
-  ">
-    Xuất tọa độ
-  </button>
+  <!-- Chọn ngày + Nút Hôm nay -->
+  <div style="display:flex; gap:8px; align-items:center;">
+    <input 
+      type="date" 
+      id="datePicker" 
+      onchange="changeDate()"
+      style="padding:8px 12px; font-size:14px; border-radius:6px; border:1px solid #ccc;"
+    >
+    <button onclick="setToday()" style="padding:8px 14px; font-size:14px; white-space:nowrap;">Hôm nay</button>
+  </div>
+
 </div>
+
+<!-- LOGO XỈN - GÓC DƯỚI BÊN PHẢI -->
+<img 
+  src="https://drive.google.com/uc?id=1gKM0DB4P08N7doqs0e6xzauFnKnmpi2J" 
+  alt="Xỉn Logo" 
+  style="position:fixed; bottom:20px; right:20px; width:75px; height:auto; z-index:999; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.25);"
+>
+
+<!-- NÚT XUẤT TỌA ĐỘ - ẨN TRÊN ĐIỆN THOẠI -->
+<button onclick="exportTables()" id="exportBtn" style="
+  position:fixed; top:10px; right:10px; z-index:999;
+  padding:10px 16px; font-size:15px; font-weight:bold;
+  background:#2d3436; color:#fff; border:none; border-radius:8px; cursor:pointer;
+">
+  Xuất tọa độ
+</button>
 
 <style>
+  /* ẨN NÚT XUẤT TỌA ĐỘ TRÊN ĐIỆN THOẠI */
   @media (max-width: 768px) {
     #exportBtn { display: none !important; }
   }
