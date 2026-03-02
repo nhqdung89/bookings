@@ -211,16 +211,16 @@ body { font-family: Arial; background:#f1f2f6; }
 </head>
 
 <body>
-<!-- ================== HEADER MỚI (SẠCH - KHÔNG CHỒNG) ================== -->
+<!-- ================== HEADER MỚI - ĐÃ FIX TRÊN ĐIỆN THOẠI ================== -->
 <div style="position:fixed; top:10px; left:10px; right:10px; z-index:999; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
 
-  <!-- Ô tìm kiếm -->
+  <!-- Thanh tìm kiếm (ngắn hơn, không che tiêu đề) -->
   <input 
     type="text" 
     id="searchInput" 
     placeholder="Tìm tên / bàn / giờ..." 
     oninput="searchTable()"
-    style="padding:8px; flex:1; min-width:200px; font-size:14px; border-radius:6px;"
+    style="padding:9px 12px; flex:1; max-width:260px; font-size:14px; border-radius:8px; border:1px solid #ddd;"
   >
 
   <!-- Chọn ngày + Nút Hôm nay -->
@@ -229,9 +229,9 @@ body { font-family: Arial; background:#f1f2f6; }
       type="date" 
       id="datePicker" 
       onchange="changeDate()"
-      style="padding:8px 12px; font-size:14px; border-radius:6px; border:1px solid #ccc;"
+      style="padding:9px 12px; font-size:14px; border-radius:8px; border:1px solid #ddd;"
     >
-    <button onclick="setToday()" style="padding:8px 14px; font-size:14px; white-space:nowrap;">Hôm nay</button>
+    <button onclick="setToday()" style="padding:9px 14px; font-size:14px; white-space:nowrap; border-radius:8px;">Hôm nay</button>
   </div>
 
 </div>
@@ -243,7 +243,7 @@ body { font-family: Arial; background:#f1f2f6; }
   style="position:fixed; bottom:20px; right:20px; width:75px; height:auto; z-index:999; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.25);"
 >
 
-<!-- NÚT XUẤT TỌA ĐỘ - ẨN TRÊN ĐIỆN THOẠI -->
+<!-- NÚT XUẤT TỌA ĐỘ - ẨN HOÀN TOÀN TRÊN ĐIỆN THOẠI -->
 <button onclick="exportTables()" id="exportBtn" style="
   position:fixed; top:10px; right:10px; z-index:999;
   padding:10px 16px; font-size:15px; font-weight:bold;
@@ -253,7 +253,7 @@ body { font-family: Arial; background:#f1f2f6; }
 </button>
 
 <style>
-  /* ẨN NÚT XUẤT TỌA ĐỘ TRÊN ĐIỆN THOẠI */
+  /* ẨN NÚT XUẤT TỌA ĐỘ TRÊN ĐIỆN THOẠI & TABLET */
   @media (max-width: 768px) {
     #exportBtn { display: none !important; }
   }
