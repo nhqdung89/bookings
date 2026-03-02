@@ -446,6 +446,10 @@ el.dataset.index = i;
     "https://iimmsztbobdiewsrlwmm.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpbW1zenRib2JkaWV3c3Jsd21tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTc3OTksImV4cCI6MjA4NzQzMzc5OX0.sK5zWthgT_UzTDzK5IeEYJVf3Le4Uxn1tZjUH9O26fo"
   );
+  
+// ================== KHAI BÁO BIẾN NGÀY (quan trọng) ==================
+  let currentDate = new Date().toISOString().split('T')[0];   // ← mặc định hôm nay
+  
   // Sau khi tạo supabaseClient
 supabaseClient
   .channel('bookings')
@@ -533,36 +537,38 @@ async function openPopup(ban) {
 // ──────────────────────────────────────────────
 /* ===== LOADDATA ===== */
   async function loadData() {
-    try {
-      const { data, error } = await supabaseClient
-        .from("bookings")
-        .select("*")
-        .eq("ngay", currentDate);
+  try {
+    const { data, error } = await supabaseClient
+      .from("bookings")
+      .select("*")
+      .eq("ngay", currentDate);     // ← dùng currentDate
 
-      if (error) throw error;
+    if (error) throw error;
 
-      document.querySelectorAll(".table").forEach(t => {
-        t.className = "table";
-        t.innerHTML = t.dataset.ban;
-      });
+    // Reset tất cả bàn
+    document.querySelectorAll(".table").forEach(t => {
+      t.className = "table";
+      t.innerHTML = t.dataset.ban;
+    });
 
-      data.forEach(row => {
-        const el = document.querySelector(`[data-ban='${row.ban}']`);
-        if (!el) return;
-        
-        el.classList.add("booked");
-        let displayTime = row.gio ? row.gio.slice(0, 5) : '—';
+    // Hiển thị dữ liệu
+    data.forEach(row => {
+      const el = document.querySelector(`[data-ban='${row.ban}']`);
+      if (!el) return;
+      
+      el.classList.add("booked");
+      let displayTime = row.gio ? row.gio.slice(0, 5) : '—';
 
-        el.innerHTML = `
-          <div>${row.ban}</div>
-          <div class="small">${displayTime}</div>
-          <div class="small">${row.ten || '—'} ${row.sokhach ? `(${row.sokhach})` : ''}</div>
-        `;
-      });
-    } catch (err) {
-      console.error("Load bookings lỗi:", err);
-    }
+      el.innerHTML = `
+        <div>${row.ban}</div>
+        <div class="small">${displayTime}</div>
+        <div class="small">${row.ten || '—'} ${row.sokhach ? `(${row.sokhach})` : ''}</div>
+      `;
+    });
+  } catch (err) {
+    console.error("Load bookings lỗi:", err);
   }
+}
     
   function closePopup() {
     const popup = document.getElementById("popup");
