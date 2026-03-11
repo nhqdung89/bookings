@@ -922,58 +922,66 @@ if (isMobile) {
   document.getElementById("datePicker").value = currentDate;
   loadData();
 
-// ================== TỰ ĐỘNG THU PHÓNG BẢN ĐỒ VỪA MÀN HÌNH (BẢN HOÀN HẢO) ==================
+// ================== TỰ ĐỘNG THU PHÓNG BẢN ĐỒ (CẮT GỌT 100% KHOẢNG TRẮNG) ==================
 function fitMapToScreen() {
   const map = document.getElementById('map');
   if (!map) return;
 
+  // 1. TẠO "HỘP CHỨA" ĐỂ CẮT GỌT BÓNG MA (GHOST SPACE)
+  let wrapper = document.getElementById('map-wrapper');
+  if (!wrapper) {
+    wrapper = document.createElement('div');
+    wrapper.id = 'map-wrapper';
+    // Đặt wrapper bọc bên ngoài map
+    map.parentNode.insertBefore(wrapper, map);
+    wrapper.appendChild(map);
+  }
+
   const screenWidth = window.innerWidth;
-  const screenHeight = window.innerHeight;
   
   if (screenWidth < 1000) {
     const scale = screenWidth / 1000; 
     
-    // 1. Thu nhỏ theo chiều ngang
+    // 2. Thu nhỏ bản đồ và đưa về sát góc trái
     map.style.transform = `scale(${scale})`;
     map.style.transformOrigin = "top left";
+    map.style.margin = "0"; // Xóa lề mặc định
+    map.style.border = "2px solid #ccc"; // Bật lại viền bản đồ
+    map.style.height = "1434px"; // Giữ đúng tỷ lệ gốc không bị méo bàn
     
-    // 2. MA THUẬT: Tính toán và kéo dài khung bản đồ để đẩy đường viền xuống tận đáy
-    const requiredHeight = (screenHeight - 85) / scale; 
-    if (requiredHeight > 1434) {
-      map.style.height = `${requiredHeight}px`; // Kéo dài nền trắng nếu màn hình dài
-    } else {
-      map.style.height = `1434px`;
-    }
-
-    const actualHeight = parseFloat(map.style.height) * scale;
-    const marginBottom = parseFloat(map.style.height) - actualHeight;
+    // 3. Tính toán chiều cao chính xác sau khi thu nhỏ
+    const actualHeight = 1434 * scale;
     
-    // 3. Căn lề chuẩn xác
-    map.style.margin = `85px 0 -${marginBottom}px 0`;
+    // 4. LỆNH MA THUẬT: Cắt "Hộp chứa" chốt hạ ngay tại mép viền dưới
+    wrapper.style.width = `${screenWidth}px`;
+    wrapper.style.height = `${actualHeight}px`; // Hộp kết thúc chính xác tại viền
+    wrapper.style.overflow = "hidden"; // CẮT TOÀN BỘ BÓNG MA BÊN DƯỚI
+    wrapper.style.margin = "85px auto 0 auto"; // Cách Header 85px
     
-    // 4. Bật viền, khóa màn hình và triệt tiêu lề ẩn của trình duyệt
-    document.body.style.margin = "0";           // XÓA LỀ ẨN GÂY DƯ KHOẢNG TRẮNG
-    document.body.style.overflow = "hidden";    // Khóa cuộn màn hình
-    document.body.style.background = "#f1f2f6"; // Nền ngoài màu xám
-    map.style.border = "2px solid #ccc";        // Viền bản đồ màu xám bạc
-    map.style.boxSizing = "border-box";         // Ép viền chìm vào trong, không làm phình bản đồ
+    // 5. Khóa cứng trang web, cấm vuốt lên/xuống
+    document.body.style.margin = "0";
+    document.body.style.height = "100vh";
+    document.body.style.overflow = "hidden"; 
+    document.body.style.background = "#f1f2f6"; // Nền ngoài màu xám để làm nổi bản đồ
     
   } else {
     // Trả lại bình thường trên máy tính
     map.style.transform = "none";
-    map.style.margin = "85px auto 0 auto";
-    map.style.height = "1434px"; 
-    document.body.style.margin = "8px"; // Lề mặc định của máy tính
+    map.style.margin = "0";
+    
+    wrapper.style.width = "1000px";
+    wrapper.style.height = "1434px";
+    wrapper.style.overflow = "visible";
+    wrapper.style.margin = "85px auto 0 auto";
+    
+    document.body.style.height = "auto";
     document.body.style.overflow = "auto";
-    document.body.style.background = "#f1f2f6";
-    map.style.border = "2px solid #ccc";
   }
 }
 
-// Lắng nghe sự kiện xoay màn hình điện thoại
+// Lắng nghe sự kiện
 window.addEventListener('resize', fitMapToScreen);
 setTimeout(fitMapToScreen, 50);
-  
 </script>
 </body>
 </html>
