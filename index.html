@@ -954,9 +954,9 @@ function fitMapToScreen() {
     // ==========================================================
     // 3 LỆNH MA THUẬT: ĐỂ GIAO DIỆN FIX CỨNG NHƯ APP NATIVE
     // ==========================================================
-    document.body.style.overflow = "hidden"; // Khóa hoàn toàn màn hình, không cho vuốt lên/xuống
-    document.body.style.background = "#fff"; // Đổi nền xám thành trắng để hòa làm 1 khối với sơ đồ
-    map.style.border = "none";               // Xóa viền khung để không ai biết sơ đồ kết thúc ở đâu
+    document.body.style.overflow = "hidden";    // Vẫn giữ lệnh khóa hoàn toàn màn hình (không cho vuốt)
+    document.body.style.background = "#f1f2f6"; // TRẢ LẠI màu nền xám nhạt như cũ
+    map.style.border = "2px solid #ccc";        // TRẢ LẠI đường viền cho sơ đồ
     
   } else {
     // Trả lại giao diện bình thường nếu xem trên máy tính PC
