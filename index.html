@@ -9,7 +9,7 @@
 <link rel="icon" href="data:;base64,iVBORw0KGgo=">
   
 <style>
-body { font-family: Arial; background:#f1f2f6; }
+body { font-family: Arial; background:#f1f2f6; overflow-x: hidden;  /* BẮT BUỘC THÊM DÒNG NÀY */}
 
 /* KHUNG SƠ ĐỒ */
 #map {
@@ -923,42 +923,40 @@ if (isMobile) {
   loadData();
 
   
-  // ================== TỰ ĐỘNG THU PHÓNG BẢN ĐỒ VỪA MÀN HÌNH ==================
+// ================== TỰ ĐỘNG THU PHÓNG BẢN ĐỒ VỪA MÀN HÌNH (BẢN FIX CHUẨN) ==================
 function fitMapToScreen() {
   const map = document.getElementById('map');
   if (!map) return;
 
-  // Lấy kích thước thực tế của màn hình điện thoại
   const screenWidth = window.innerWidth;
-  const screenHeight = window.innerHeight - 80; // Trừ đi 80px cho Header (thanh tìm kiếm)
-
-  // Tính toán tỷ lệ cần thu nhỏ
-  const scaleWidth = screenWidth / 1000;
-  const scaleHeight = screenHeight / 1434;
-
-  // Nếu màn hình nhỏ hơn kích thước map (Mobile/Tablet)
-  if (screenWidth < 1000 || screenHeight < 1434) {
-    // Lấy tỷ lệ nhỏ hơn để đảm bảo map nằm trọn trong màn hình mà KHÔNG bị méo
-    let scale = Math.min(scaleWidth, scaleHeight);
+  
+  // Nếu mở trên điện thoại / tablet (màn hình nhỏ hơn kích thước gốc 1000px)
+  if (screenWidth < 1000) {
+    // Để lại 10px lề cho 2 bên nhìn thoáng hơn
+    const scale = (screenWidth - 10) / 1000; 
     
-    // Nhân thêm 0.96 để tạo một chút viền xung quanh, nhìn thoáng hơn
-    scale = scale * 0.96;
-
-    // Áp dụng thu phóng
+    // 1. Ép tâm thu nhỏ về sát góc trên cùng bên trái
     map.style.transform = `scale(${scale})`;
-    map.style.transformOrigin = "top center";
-
-    // Khử khoảng trắng thừa phía dưới do DOM vẫn giữ chiều cao cũ 1434px
+    map.style.transformOrigin = "top left";
+    
+    // 2. Tính toán chính xác khoảng cách lề trái để đẩy map ra giữa màn hình
+    const leftOffset = (screenWidth - (1000 * scale)) / 2;
+    
+    // 3. Cắt gọt chiều cao thừa và áp dụng căn lề
     const actualHeight = 1434 * scale;
-    map.style.marginBottom = `-${1434 - actualHeight}px`;
+    const marginBottom = 1434 - actualHeight;
+    
+    // Áp dụng gộp (Top: 85px tránh bị thanh search đè, Right: 0, Bottom: cắt đi, Left: căn giữa)
+    map.style.margin = `85px 0 -${marginBottom}px ${leftOffset}px`;
+    
   } else {
-    // Reset lại nếu xem trên màn hình máy tính lớn
+    // Trả lại bình thường nếu xem trên máy tính
     map.style.transform = "none";
-    map.style.marginBottom = "0";
+    map.style.margin = "85px auto 0 auto";
   }
 }
 
-// Chạy hàm ngay khi load trang và mỗi khi người dùng xoay ngang/dọc điện thoại
+// Lắng nghe sự kiện xoay màn hình điện thoại
 window.addEventListener('resize', fitMapToScreen);
 setTimeout(fitMapToScreen, 50);
   
