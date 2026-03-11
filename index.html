@@ -224,7 +224,7 @@ body { font-family: Arial; background:#f1f2f6; overflow-x: hidden;  /* BẮT BU�
     style="padding:9px 12px; flex:1; max-width:260px; font-size:14px; border-radius:8px; border:1px solid #ddd;"
   >
 
-  <!-- Chọn ngày + Nút Hôm nay -->
+  <!-- Chọn ngày -->
   <div style="display:flex; gap:8px; align-items:center;">
     <input 
       type="date" 
@@ -232,7 +232,6 @@ body { font-family: Arial; background:#f1f2f6; overflow-x: hidden;  /* BẮT BU�
       onchange="changeDate()"
       style="padding:9px 12px; font-size:14px; border-radius:8px; border:1px solid #ddd;"
     >
-    <button onclick="setToday()" style="padding:9px 14px; font-size:14px; white-space:nowrap; border-radius:8px;">Hôm nay</button>
   </div>
 
 </div>
@@ -462,11 +461,6 @@ supabaseClient
     loadData();
   };
 
-  window.setToday = function() {
-    currentDate = new Date().toISOString().split('T')[0];
-    document.getElementById("datePicker").value = currentDate;
-    loadData();
-  };
   
     // ================== HÀM OPENPOPUP CUỐI CÙNG (ĐÃ SỬA) ==================
 async function openPopup(ban) {
