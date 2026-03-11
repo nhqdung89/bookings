@@ -922,46 +922,48 @@ if (isMobile) {
   document.getElementById("datePicker").value = currentDate;
   loadData();
 
-  
-// ================== TỰ ĐỘNG THU PHÓNG BẢN ĐỒ VỪA MÀN HÌNH (BIẾN WEB THÀNH APP) ==================
+// ================== TỰ ĐỘNG THU PHÓNG BẢN ĐỒ VỪA MÀN HÌNH (BẢN HOÀN HẢO) ==================
 function fitMapToScreen() {
   const map = document.getElementById('map');
   if (!map) return;
 
   const screenWidth = window.innerWidth;
-  const screenHeight = window.innerHeight; // Lấy thêm chiều cao màn hình
+  const screenHeight = window.innerHeight;
   
   if (screenWidth < 1000) {
-    // 1. Thu nhỏ vừa đúng 100% chiều ngang màn hình (không để chừa lề)
     const scale = screenWidth / 1000; 
     
+    // 1. Thu nhỏ theo chiều ngang
     map.style.transform = `scale(${scale})`;
     map.style.transformOrigin = "top left";
     
-    const actualHeight = 1434 * scale;
-    const marginBottom = 1434 - actualHeight;
-    
-    // 2. Tính khoảng trống dư thừa theo chiều dọc (trừ 85px thanh Header)
-    // Sau đó chia đôi để đẩy sơ đồ xuống ngay chính giữa màn hình điện thoại
-    let topMargin = 85; 
-    const emptySpace = screenHeight - actualHeight - 85;
-    if (emptySpace > 0) {
-        topMargin = 85 + (emptySpace / 2); 
+    // 2. MA THUẬT: Tính toán và kéo dài khung bản đồ để đẩy đường viền xuống tận đáy
+    const requiredHeight = (screenHeight - 85) / scale; 
+    if (requiredHeight > 1434) {
+      map.style.height = `${requiredHeight}px`; // Kéo dài nền trắng nếu màn hình dài
+    } else {
+      map.style.height = `1434px`;
     }
 
-    map.style.margin = `${topMargin}px 0 -${marginBottom}px 0`;
+    const actualHeight = parseFloat(map.style.height) * scale;
+    const marginBottom = parseFloat(map.style.height) - actualHeight;
     
-    // ==========================================================
-    // 3 LỆNH MA THUẬT: ĐỂ GIAO DIỆN FIX CỨNG NHƯ APP NATIVE
-    // ==========================================================
-    document.body.style.overflow = "hidden";    // Vẫn giữ lệnh khóa hoàn toàn màn hình (không cho vuốt)
-    document.body.style.background = "#f1f2f6"; // TRẢ LẠI màu nền xám nhạt như cũ
-    map.style.border = "2px solid #ccc";        // TRẢ LẠI đường viền cho sơ đồ
+    // 3. Căn lề chuẩn xác
+    map.style.margin = `85px 0 -${marginBottom}px 0`;
+    
+    // 4. Bật viền, khóa màn hình và triệt tiêu lề ẩn của trình duyệt
+    document.body.style.margin = "0";           // XÓA LỀ ẨN GÂY DƯ KHOẢNG TRẮNG
+    document.body.style.overflow = "hidden";    // Khóa cuộn màn hình
+    document.body.style.background = "#f1f2f6"; // Nền ngoài màu xám
+    map.style.border = "2px solid #ccc";        // Viền bản đồ màu xám bạc
+    map.style.boxSizing = "border-box";         // Ép viền chìm vào trong, không làm phình bản đồ
     
   } else {
-    // Trả lại giao diện bình thường nếu xem trên máy tính PC
+    // Trả lại bình thường trên máy tính
     map.style.transform = "none";
     map.style.margin = "85px auto 0 auto";
+    map.style.height = "1434px"; 
+    document.body.style.margin = "8px"; // Lề mặc định của máy tính
     document.body.style.overflow = "auto";
     document.body.style.background = "#f1f2f6";
     map.style.border = "2px solid #ccc";
