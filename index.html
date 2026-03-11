@@ -923,36 +923,48 @@ if (isMobile) {
   loadData();
 
   
-// ================== TỰ ĐỘNG THU PHÓNG BẢN ĐỒ VỪA MÀN HÌNH (BẢN FIX CHUẨN) ==================
+// ================== TỰ ĐỘNG THU PHÓNG BẢN ĐỒ VỪA MÀN HÌNH (BIẾN WEB THÀNH APP) ==================
 function fitMapToScreen() {
   const map = document.getElementById('map');
   if (!map) return;
 
   const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight; // Lấy thêm chiều cao màn hình
   
-  // Nếu mở trên điện thoại / tablet (màn hình nhỏ hơn kích thước gốc 1000px)
   if (screenWidth < 1000) {
-    // Để lại 10px lề cho 2 bên nhìn thoáng hơn
-    const scale = (screenWidth - 10) / 1000; 
+    // 1. Thu nhỏ vừa đúng 100% chiều ngang màn hình (không để chừa lề)
+    const scale = screenWidth / 1000; 
     
-    // 1. Ép tâm thu nhỏ về sát góc trên cùng bên trái
     map.style.transform = `scale(${scale})`;
     map.style.transformOrigin = "top left";
     
-    // 2. Tính toán chính xác khoảng cách lề trái để đẩy map ra giữa màn hình
-    const leftOffset = (screenWidth - (1000 * scale)) / 2;
-    
-    // 3. Cắt gọt chiều cao thừa và áp dụng căn lề
     const actualHeight = 1434 * scale;
     const marginBottom = 1434 - actualHeight;
     
-    // Áp dụng gộp (Top: 85px tránh bị thanh search đè, Right: 0, Bottom: cắt đi, Left: căn giữa)
-    map.style.margin = `85px 0 -${marginBottom}px ${leftOffset}px`;
+    // 2. Tính khoảng trống dư thừa theo chiều dọc (trừ 85px thanh Header)
+    // Sau đó chia đôi để đẩy sơ đồ xuống ngay chính giữa màn hình điện thoại
+    let topMargin = 85; 
+    const emptySpace = screenHeight - actualHeight - 85;
+    if (emptySpace > 0) {
+        topMargin = 85 + (emptySpace / 2); 
+    }
+
+    map.style.margin = `${topMargin}px 0 -${marginBottom}px 0`;
+    
+    // ==========================================================
+    // 3 LỆNH MA THUẬT: ĐỂ GIAO DIỆN FIX CỨNG NHƯ APP NATIVE
+    // ==========================================================
+    document.body.style.overflow = "hidden"; // Khóa hoàn toàn màn hình, không cho vuốt lên/xuống
+    document.body.style.background = "#fff"; // Đổi nền xám thành trắng để hòa làm 1 khối với sơ đồ
+    map.style.border = "none";               // Xóa viền khung để không ai biết sơ đồ kết thúc ở đâu
     
   } else {
-    // Trả lại bình thường nếu xem trên máy tính
+    // Trả lại giao diện bình thường nếu xem trên máy tính PC
     map.style.transform = "none";
     map.style.margin = "85px auto 0 auto";
+    document.body.style.overflow = "auto";
+    document.body.style.background = "#f1f2f6";
+    map.style.border = "2px solid #ccc";
   }
 }
 
