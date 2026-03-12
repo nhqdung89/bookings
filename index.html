@@ -242,7 +242,7 @@ body { font-family: Arial; background:#f1f2f6; overflow-x: hidden;  /* BẮT BU�
   id="logo-xin"
   src="https://drive.google.com/thumbnail?id=1gKM0DB4P08N7doqs0e6xzauFnKnmpi2J&sz=w500" 
   alt="Xỉn Logo" 
-  style="position:absolute; top:0; left:0; width:75px; height:auto; z-index:99999; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.25); pointer-events:none; transform-origin: 0 0;"
+  style="position:fixed; bottom:20px; right:20px; width:75px; height:auto; z-index:9999; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.25); pointer-events:none;"
 >
 
 <!-- NÚT XUẤT TỌA ĐỘ - ẨN HOÀN TOÀN TRÊN ĐIỆN THOẠI -->
@@ -993,37 +993,7 @@ window.addEventListener('orientationchange', function() {
 // Chạy lần đầu khi mở web
 setTimeout(fitMapToScreen, 50);
 
-// ================== LOGO LUÔN NỔI BẤT CHẤP ZOOM (GPU TĂNG TỐC) ==================
-const logoXin = document.getElementById('logo-xin');
 
-if (logoXin && window.visualViewport) {
-  function updateLogoPos() {
-    const vv = window.visualViewport;
-    // Tính toán độ Zoom hiện tại của người dùng
-    const scale = 1 / vv.scale;
-    
-    // Khai báo kích thước gốc của logo (75px) và lề cách viền màn hình (20px)
-    const width = 75;
-    const height = logoXin.offsetHeight > 0 ? logoXin.offsetHeight : 75; 
-    const margin = 20;
-
-    // LỆNH MA THUẬT: Tính toán tọa độ chính xác của góc dưới - bên phải "Ống kính camera"
-    // Bất chấp người dùng đang zoom vào góc nào của bản đồ
-    const x = vv.pageLeft + vv.width - (width * scale) - (margin * scale);
-    const y = vv.pageTop + vv.height - (height * scale) - (margin * scale);
-
-    // Dùng Translate của chip đồ họa để di chuyển logo siêu mượt theo ngón tay
-    logoXin.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
-  }
-
-  // Lắng nghe mọi cử động nhỏ nhất của người dùng (Zoom, Vuốt, Cuộn)
-  window.visualViewport.addEventListener('scroll', updateLogoPos);
-  window.visualViewport.addEventListener('resize', updateLogoPos);
-  
-  // Chạy ngay khi logo vừa load xong
-  logoXin.addEventListener('load', updateLogoPos);
-  updateLogoPos();
-}
   
 </script>
 </body>
