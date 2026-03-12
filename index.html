@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Xỉn - Bookings</title>
   
 <!-- FIX LỖI FAVICON 404 -->
@@ -919,7 +919,7 @@ if (isMobile) {
   document.getElementById("datePicker").value = currentDate;
   loadData();
 
-// ================== TỰ ĐỘNG THU PHÓNG BẢN ĐỒ (BẢN FINAL CHUẨN KÍCH THƯỚC + CHỐNG BÀN PHÍM) ==================
+// ================== TỰ ĐỘNG THU PHÓNG BẢN ĐỒ (BẢN MỞ KHÓA CHO PHÉP ZOOM IN/OUT) ==================
 function fitMapToScreen() {
   const map = document.getElementById('map');
   if (!map) return;
@@ -932,40 +932,39 @@ function fitMapToScreen() {
     wrapper.appendChild(map);
   }
 
+  // Dùng innerWidth chuẩn của thiết bị lúc chưa zoom
   const screenWidth = window.innerWidth;
   
   if (screenWidth < 1004) {
-    // 1. Tỷ lệ chuẩn: Tính cả 4px viền (2px trái + 2px phải = 1004px)
     const scale = screenWidth / 1004; 
     
+    // 1. Vẫn thu nhỏ bản đồ vừa khung
     map.style.transform = `scale(${scale})`;
     map.style.transformOrigin = "top left";
     map.style.margin = "0";
     map.style.border = "2px solid #ccc"; 
     map.style.height = "1434px"; 
     
-    // 2. Chiều cao chuẩn: Tính cả 4px viền (2px trên + 2px dưới = 1438px)
     const actualHeight = 1438 * scale;
     
-    wrapper.style.position = "fixed";
-    wrapper.style.top = "85px"; 
+    // 2. Hộp chứa (Wrapper) chuyển về Relative để trôi theo trang, nhưng vẫn CẮT KHOẢNG TRẮNG
+    wrapper.style.position = "relative"; // <--- Bỏ Fixed
+    wrapper.style.top = "0"; 
     wrapper.style.left = "0";
     wrapper.style.width = `${screenWidth}px`;
-    
-    // 3. MA THUẬT: Làm tròn lên (Math.ceil) để trình duyệt không bao giờ "ăn bớt" viền do số lẻ
     wrapper.style.height = `${Math.ceil(actualHeight)}px`; 
-    wrapper.style.overflow = "hidden";
-    wrapper.style.margin = "0"; 
+    wrapper.style.overflow = "hidden"; // Vẫn chém đứt đuôi thừa
+    wrapper.style.margin = "85px auto 0 auto"; // Đẩy lề xuống tránh Header
     
+    // 3. MỞ KHÓA HOÀN TOÀN TRÌNH DUYỆT ĐỂ BẠN CÓ THỂ ZOOM VÀ PAN
     document.body.style.margin = "0";
-    document.body.style.height = "100vh";
-    document.body.style.overflow = "hidden"; 
-    document.body.style.position = "fixed"; 
-    document.body.style.width = "100%";
+    document.body.style.height = "auto";       // <--- Trả lại chiều cao tự nhiên
+    document.body.style.overflow = "auto";     // <--- MỞ KHÓA Scroll
+    document.body.style.position = "static";   // <--- MỞ KHÓA Fixed
     document.body.style.background = "#f1f2f6"; 
     
   } else {
-    // Trả lại bình thường trên máy tính
+    // Máy tính PC
     map.style.transform = "none";
     map.style.margin = "0";
     
@@ -983,8 +982,13 @@ function fitMapToScreen() {
   }
 }
 
-// Lắng nghe sự kiện xoay màn hình điện thoại
-window.addEventListener('resize', fitMapToScreen);
+// 4. LỆNH MẤU CHỐT: Thay 'resize' bằng 'orientationchange' 
+// Để khi bạn dùng ngón tay zoom in/out, code sẽ KHÔNG xen vào chống lại ngón tay của bạn nữa.
+window.addEventListener('orientationchange', function() {
+    setTimeout(fitMapToScreen, 200); // Đợi màn hình xoay xong mới tính toán lại
+});
+
+// Chạy lần đầu khi mở web
 setTimeout(fitMapToScreen, 50);
   
 </script>
