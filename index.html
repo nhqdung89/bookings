@@ -245,19 +245,50 @@ body { font-family: Arial; background:#f1f2f6; overflow-x: hidden;  /* BẮT BU�
   style="position:fixed; bottom:20px; right:20px; width:75px; height:auto; z-index:9999; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.25); pointer-events:none;"
 >
 
-<!-- NÚT XUẤT TỌA ĐỘ - ẨN HOÀN TOÀN TRÊN ĐIỆN THOẠI -->
-<button onclick="exportTables()" id="exportBtn" style="
-  position:fixed; top:10px; right:10px; z-index:999;
-  padding:10px 16px; font-size:15px; font-weight:bold;
-  background:#2d3436; color:#fff; border:none; border-radius:8px; cursor:pointer;
+<!-- ACTIONS DESKTOP -->
+<div id="desktopActions" style="
+  position:fixed; top:48px; right:10px; z-index:999;
+  display:flex; gap:8px; flex-wrap:wrap;
 ">
-  Xuất tọa độ
-</button>
+  <button onclick="copySelectedTable()" id="copyBtn" style="
+    padding:10px 16px; font-size:15px; font-weight:bold;
+    background:#0984e3; color:#fff; border:none; border-radius:8px; cursor:pointer;
+  ">
+    Copy bàn
+  </button>
+
+  <button onclick="renameSelectedTable()" id="renameBtn" style="
+    padding:10px 16px; font-size:15px; font-weight:bold;
+    background:#6c5ce7; color:#fff; border:none; border-radius:8px; cursor:pointer;
+  ">
+    Sửa số bàn
+  </button>
+
+  <button onclick="deleteSelectedTable()" id="deleteTableBtn" style="
+    padding:10px 16px; font-size:15px; font-weight:bold;
+    background:#d63031; color:#fff; border:none; border-radius:8px; cursor:pointer;
+  ">
+    Xóa bàn
+  </button>
+
+  <button onclick="saveLayoutToDB()" id="saveLayoutBtn" style="
+    padding:10px 16px; font-size:15px; font-weight:bold;
+    background:#00b894; color:#fff; border:none; border-radius:8px; cursor:pointer;
+  ">
+    Lưu tọa độ
+  </button>
+
+  <button onclick="exportTables()" id="exportBtn" style="
+    padding:10px 16px; font-size:15px; font-weight:bold;
+    background:#2d3436; color:#fff; border:none; border-radius:8px; cursor:pointer;
+  ">
+    Xuất tọa độ
+  </button>
+</div>
 
 <style>
-  /* ẨN NÚT XUẤT TỌA ĐỘ TRÊN ĐIỆN THOẠI & TABLET */
   @media (max-width: 768px) {
-    #exportBtn { display: none !important; }
+    #desktopActions { display: none !important; }
   }
 </style>
   
@@ -338,7 +369,7 @@ body { font-family: Arial; background:#f1f2f6; overflow-x: hidden;  /* BẮT BU�
 
 
 
-const tables = [
+let tables = [
   [87,1333,650],
   [4,1250,220],
   [3,1250,320],
@@ -421,16 +452,24 @@ const tables = [
   [71,279,86],
 ];
   
-tables.forEach((t, i)=>{
-  const el = document.createElement("div");
-  el.className = "table";
-  el.style.top = t[1] + "px";
-  el.style.left = t[2] + "px";
-  el.dataset.ban = t[0];
-el.dataset.index = i;
-  el.innerHTML = t[0];
-  document.getElementById("map").appendChild(el);
-});
+function renderTables() {
+  const map = document.getElementById("map");
+
+  document.querySelectorAll(".table").forEach(el => el.remove());
+
+  tables.forEach((t, i) => {
+    const el = document.createElement("div");
+    el.className = "table";
+    el.style.top = t[1] + "px";
+    el.style.left = t[2] + "px";
+    el.dataset.ban = t[0];
+    el.dataset.index = i;
+    el.innerHTML = t[0];
+    map.appendChild(el);
+  });
+}
+
+renderTables();
 </script>
 
 
@@ -447,6 +486,277 @@ el.dataset.index = i;
     "https://iimmsztbobdiewsrlwmm.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpbW1zenRib2JkaWV3c3Jsd21tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTc3OTksImV4cCI6MjA4NzQzMzc5OX0.sK5zWthgT_UzTDzK5IeEYJVf3Le4Uxn1tZjUH9O26fo"
   );
+
+  /* ===== LAYOUT DATA SOURCE =====
+     Thứ tự load:
+     1) daily_table_layouts theo ngày đang chọn
+     2) default_table_layouts
+     3) mảng hard-code trong file
+  ===== */
+
+  function getNormalizedDate(value) {
+    return value ? value : new Date().toISOString().split('T')[0];
+  }
+
+  function getBanInFilter(values) {
+    if (!values || values.length === 0) return '("")';
+    return `(${values.map(v => `"${String(v).replace(/"/g, '\"')}"`).join(",")})`;
+  }
+
+  function getNextTableNumber() {
+    const nums = tables
+      .map(t => parseInt(String(t[0]), 10))
+      .filter(n => !Number.isNaN(n));
+
+    return nums.length ? Math.max(...nums) + 1 : 1;
+  }
+
+  function clearSelectedTables() {
+    document.querySelectorAll(".table.selected").forEach(t => {
+      t.classList.remove("selected");
+    });
+    selected = [];
+  }
+
+  async function loadLayoutFromDB(dateValue) {
+    const targetDate = getNormalizedDate(dateValue);
+
+    try {
+      const { data: dailyData, error: dailyError } = await supabaseClient
+        .from("daily_table_layouts")
+        .select("*")
+        .eq("ngay", targetDate)
+        .order("ban", { ascending: true });
+
+      if (dailyError) throw dailyError;
+
+      if (dailyData && dailyData.length > 0) {
+        tables = dailyData.map(row => [
+          String(row.ban),
+          Number(row.y),
+          Number(row.x)
+        ]);
+        renderTables();
+        return;
+      }
+
+      const { data: defaultData, error: defaultError } = await supabaseClient
+        .from("default_table_layouts")
+        .select("*")
+        .order("ban", { ascending: true });
+
+      if (defaultError) throw defaultError;
+
+      if (defaultData && defaultData.length > 0) {
+        tables = defaultData.map(row => [
+          String(row.ban),
+          Number(row.y),
+          Number(row.x)
+        ]);
+      }
+
+      renderTables();
+    } catch (err) {
+      console.error("Lỗi load layout:", err);
+      renderTables();
+    }
+  }
+
+  async function saveLayoutToDB() {
+    const targetDate = getNormalizedDate(document.getElementById("datePicker").value || currentDate);
+
+    try {
+      const payloadDaily = tables.map(t => ({
+        ngay: targetDate,
+        ban: String(t[0]),
+        y: Math.round(t[1]),
+        x: Math.round(t[2]),
+        width: 75,
+        height: 55,
+        updated_at: new Date().toISOString()
+      }));
+
+      const payloadDefault = tables.map(t => ({
+        ban: String(t[0]),
+        y: Math.round(t[1]),
+        x: Math.round(t[2]),
+        width: 75,
+        height: 55,
+        updated_at: new Date().toISOString()
+      }));
+
+      const currentBans = tables.map(t => String(t[0]));
+      const banFilter = getBanInFilter(currentBans);
+
+      const { error: dailyDeleteError } = await supabaseClient
+        .from("daily_table_layouts")
+        .delete()
+        .eq("ngay", targetDate)
+        .not("ban", "in", banFilter);
+
+      if (dailyDeleteError) throw dailyDeleteError;
+
+      const { error: defaultDeleteError } = await supabaseClient
+        .from("default_table_layouts")
+        .delete()
+        .not("ban", "in", banFilter);
+
+      if (defaultDeleteError) throw defaultDeleteError;
+
+      const { error: dailyUpsertError } = await supabaseClient
+        .from("daily_table_layouts")
+        .upsert(payloadDaily, { onConflict: "ngay,ban" });
+
+      if (dailyUpsertError) throw dailyUpsertError;
+
+      const { error: defaultUpsertError } = await supabaseClient
+        .from("default_table_layouts")
+        .upsert(payloadDefault, { onConflict: "ban" });
+
+      if (defaultUpsertError) throw defaultUpsertError;
+
+      alert(`Đã lưu tọa độ cho ngày ${targetDate} và cập nhật layout mặc định!`);
+    } catch (err) {
+      console.error("Lỗi lưu layout:", err);
+      alert("Lưu tọa độ thất bại: " + err.message);
+    }
+  }
+
+  function copySelectedTable() {
+    if (selected.length !== 1) {
+      alert("Vui lòng chọn đúng 1 bàn để copy.");
+      return;
+    }
+
+    const sourceEl = selected[0];
+    const sourceIndex = parseInt(sourceEl.dataset.index, 10);
+    const sourceTable = tables[sourceIndex];
+
+    const newBan = String(getNextTableNumber());
+    const newTop = sourceTable[1] + 20;
+    const newLeft = sourceTable[2] + 20;
+
+    saveState();
+    tables.push([newBan, newTop, newLeft]);
+    renderTables();
+    clearSelectedTables();
+
+    const newEl = document.querySelector(`[data-ban='${CSS.escape(newBan)}']`);
+    if (newEl) {
+      newEl.classList.add("selected");
+      selected = [newEl];
+    }
+
+    loadData();
+  }
+
+  async function deleteSelectedTable() {
+    if (selected.length !== 1) {
+      alert("Vui lòng chọn đúng 1 bàn để xóa.");
+      return;
+    }
+
+    const el = selected[0];
+    const index = parseInt(el.dataset.index, 10);
+    const ban = String(tables[index][0]);
+
+    if (!confirm(`Xóa bàn ${ban} khỏi layout ngày ${currentDate} và layout mặc định?`)) return;
+
+    try {
+      const hasBookingToday = await supabaseClient
+        .from("bookings")
+        .select("id")
+        .eq("ban", ban)
+        .eq("ngay", currentDate)
+        .limit(1);
+
+      if (hasBookingToday.error) throw hasBookingToday.error;
+
+      if (hasBookingToday.data && hasBookingToday.data.length > 0) {
+        alert(`Bàn ${ban} đang có booking trong ngày ${currentDate}. Hãy xóa hoặc đổi booking trước.`);
+        return;
+      }
+
+      saveState();
+      tables.splice(index, 1);
+      renderTables();
+      clearSelectedTables();
+      await loadData();
+    } catch (err) {
+      console.error("Lỗi xóa bàn:", err);
+      alert("Xóa bàn thất bại: " + err.message);
+    }
+  }
+
+  async function renameSelectedTable() {
+    if (selected.length !== 1) {
+      alert("Vui lòng chọn đúng 1 bàn để sửa số/tên.");
+      return;
+    }
+
+    const el = selected[0];
+    const index = parseInt(el.dataset.index, 10);
+    const oldBan = String(tables[index][0]);
+
+    const newBanRaw = prompt("Nhập số/tên bàn mới:", oldBan);
+    if (newBanRaw === null) return;
+
+    const newBan = newBanRaw.trim();
+    if (!newBan) {
+      alert("Số/tên bàn không được để trống.");
+      return;
+    }
+
+    if (newBan === oldBan) return;
+
+    const existed = tables.some((t, i) => i !== index && String(t[0]) === newBan);
+    if (existed) {
+      alert(`Bàn ${newBan} đã tồn tại trong layout hiện tại.`);
+      return;
+    }
+
+    try {
+      const { data: bookingRows, error: bookingReadError } = await supabaseClient
+        .from("bookings")
+        .select("id")
+        .eq("ban", oldBan);
+
+      if (bookingReadError) throw bookingReadError;
+
+      if (bookingRows && bookingRows.length > 0) {
+        const bookingIds = bookingRows.map(r => r.id);
+        const { error: bookingUpdateError } = await supabaseClient
+          .from("bookings")
+          .update({ ban: newBan })
+          .in("id", bookingIds);
+
+        if (bookingUpdateError) throw bookingUpdateError;
+      }
+
+      saveState();
+      tables[index][0] = newBan;
+      renderTables();
+      clearSelectedTables();
+
+      const renamedEl = document.querySelector(`[data-ban='${CSS.escape(newBan)}']`);
+      if (renamedEl) {
+        renamedEl.classList.add("selected");
+        selected = [renamedEl];
+      }
+
+      await loadData();
+      alert(`Đã đổi bàn ${oldBan} thành ${newBan}.`);
+    } catch (err) {
+      console.error("Lỗi đổi số/tên bàn:", err);
+      alert("Đổi số/tên bàn thất bại: " + err.message);
+    }
+  }
+
+  window.copySelectedTable = copySelectedTable;
+  window.saveLayoutToDB = saveLayoutToDB;
+  window.deleteSelectedTable = deleteSelectedTable;
+  window.renameSelectedTable = renameSelectedTable;
+
   
 // ================== KHAI BÁO BIẾN NGÀY (quan trọng) ==================
   let currentDate = new Date().toISOString().split('T')[0];   // ← mặc định hôm nay
@@ -462,9 +772,10 @@ supabaseClient
   console.log("✅ Supabase đã load thành công!");
 
 // ================== CHỌN NGÀY ==================
-  window.changeDate = function() {
+  window.changeDate = async function() {
     currentDate = document.getElementById("datePicker").value;
-    loadData();
+    await loadLayoutFromDB(currentDate);
+    await loadData();
   };
 
   
@@ -630,8 +941,6 @@ async function save() {
   window.save       = save;
   window.remove     = remove;
 
-  // Load dữ liệu ban đầu
-  loadData();
 
 // === TEST KẾT NỐI (chỉ để kiểm tra) ===
 supabaseClient.from("bookings").select("count").then(({ data, error }) => {
@@ -905,8 +1214,8 @@ const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/
               || ('ontouchstart' in window);
 
 if (isMobile) {
-  // BỔ SUNG DÒNG NÀY: Dùng JS ép ẩn nút Xuất Tọa Độ luôn nếu là điện thoại
-  document.getElementById('exportBtn').style.display = 'none';
+  const desktopActions = document.getElementById('desktopActions');
+  if (desktopActions) desktopActions.style.display = 'none';
 
   // Trên mobile: chạm 1 lần mở popup
   document.addEventListener('click', function(e) {
@@ -923,7 +1232,8 @@ if (isMobile) {
 // Giữ nguyên double click cho máy tính (không ảnh hưởng)
 // Load ban đầu
   document.getElementById("datePicker").value = currentDate;
-  loadData();
+  await loadLayoutFromDB(currentDate);
+  await loadData();
 
 // ================== TỰ ĐỘNG THU PHÓNG BẢN ĐỒ (BẢN MỞ KHÓA CHO PHÉP ZOOM IN/OUT) ==================
 function fitMapToScreen() {
