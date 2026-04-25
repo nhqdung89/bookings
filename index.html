@@ -688,69 +688,86 @@ renderTables();
     }
   }
 
-  async function renameSelectedTable() {
-    if (selected.length !== 1) {
-      alert("Vui lòng chọn đúng 1 bàn để sửa số/tên.");
-      return;
-    }
-
-    const el = selected[0];
-    const index = parseInt(el.dataset.index, 10);
-    const oldBan = String(tables[index][0]);
-
-    const newBanRaw = prompt("Nhập số/tên bàn mới:", oldBan);
-    if (newBanRaw === null) return;
-
-    const newBan = newBanRaw.trim();
-    if (!newBan) {
-      alert("Số/tên bàn không được để trống.");
-      return;
-    }
-
-    if (newBan === oldBan) return;
-
-    const existed = tables.some((t, i) => i !== index && String(t[0]) === newBan);
-    if (existed) {
-      alert(`Bàn ${newBan} đã tồn tại trong layout hiện tại.`);
-      return;
-    }
-
-    try {
-      const { data: bookingRows, error: bookingReadError } = await supabaseClient
-        .from("bookings")
-        .select("id")
-        .eq("ban", oldBan);
-
-      if (bookingReadError) throw bookingReadError;
-
-      if (bookingRows && bookingRows.length > 0) {
-        const bookingIds = bookingRows.map(r => r.id);
-        const { error: bookingUpdateError } = await supabaseClient
-          .from("bookings")
-          .update({ ban: newBan })
-          .in("id", bookingIds);
-
-        if (bookingUpdateError) throw bookingUpdateError;
-      }
-
-      saveState();
-      tables[index][0] = newBan;
-      renderTables();
-      clearSelectedTables();
-
-      const renamedEl = document.querySelector(`[data-ban='${CSS.escape(newBan)}']`);
-      if (renamedEl) {
-        renamedEl.classList.add("selected");
-        selected = [renamedEl];
-      }
-
-      await loadData();
-      alert(`Đã đổi bàn ${oldBan} thành ${newBan}.`);
-    } catch (err) {
-      console.error("Lỗi đổi số/tên bàn:", err);
-      alert("Đổi số/tên bàn thất bại: " + err.message);
-    }
+async function renameSelectedTable() {
+  if (selected.length !== 1) {
+    alert("Vui lòng chọn đúng 1 bàn để sửa số/tên.");
+    return;
   }
+
+  const el = selected[0];
+  const index = parseInt(el.dataset.index, 10);
+  const oldBan = String(tables[index][0]);
+
+  const newBanRaw = prompt("Nhập số/tên bàn mới:", oldBan);
+  if (newBanRaw === null) return;
+
+  const newBan = newBanRaw.trim();
+  if (!newBan) {
+    alert("Số/tên bàn không được để trống.");
+    return;
+  }
+
+  if (newBan === oldBan) return;
+
+  const existed = tables.some((t, i) => i !== index && String(t[0]) === newBan);
+  if (existed) {
+    alert(`Bàn ${newBan} đã tồn tại.`);
+    return;
+  }
+
+  const confirmRename = confirm(
+    `Đổi bàn ${oldBan} thành ${newBan} chỉ trên layout.\nBooking đã lưu sẽ không đổi. Tiếp tục không?`
+  );
+  if (!confirmRename) return;
+
+  try {
+    saveState();
+
+    // Đổi tên bàn trong mảng layout hiện tại
+    tables[index][0] = newBan;
+    renderTables();
+    clearSelectedTables();
+
+    // Select lại bàn vừa đổi tên
+    const renamedEl = document.querySelector(`[data-ban='${CSS.escape(newBan)}']`);
+    if (renamedEl) {
+      renamedEl.classList.add("selected");
+      selected = [renamedEl];
+    }
+
+    // Chỉ cập nhật layout của ngày đang chọn nếu ngày đó đã có record
+    const targetDate = getNormalizedDate(document.getElementById("datePicker").value || currentDate);
+
+    // Xóa record layout cũ theo ngày hiện tại
+    const { error: dailyDeleteError } = await supabaseClient
+      .from("daily_table_layouts")
+      .delete()
+      .eq("ngay", targetDate)
+      .eq("ban", oldBan);
+
+    if (dailyDeleteError) throw dailyDeleteError;
+
+    // Upsert record layout mới theo ngày hiện tại
+    const { error: dailyUpsertError } = await supabaseClient
+      .from("daily_table_layouts")
+      .upsert([{
+        ngay: targetDate,
+        ban: newBan,
+        y: Math.round(tables[index][1]),
+        x: Math.round(tables[index][2]),
+        width: 75,
+        height: 55,
+        updated_at: new Date().toISOString()
+      }], { onConflict: "ngay,ban" });
+
+    if (dailyUpsertError) throw dailyUpsertError;
+
+    alert(`Đã đổi tên bàn trên layout từ ${oldBan} thành ${newBan}. Booking không thay đổi.`);
+  } catch (err) {
+    console.error("Lỗi đổi số bàn:", err);
+    alert("Đổi số/tên bàn thất bại: " + err.message);
+  }
+}
 
   window.copySelectedTable = copySelectedTable;
   window.saveLayoutToDB = saveLayoutToDB;
