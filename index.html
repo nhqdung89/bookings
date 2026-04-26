@@ -20,44 +20,7 @@ body { font-family: Arial; background:#f1f2f6; overflow-x: hidden;  /* BẮT BU�
   background: #fff;
   border: 2px solid #ccc;
 }
-#desktopActions {
-  position: fixed;
-  top: 90px;
-  right: 12px;
-  z-index: 999;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: stretch;
-  padding: 10px;
-  background: rgba(255,255,255,0.92);
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-}
 
-#desktopActions button {
-  width: 150px;
-  padding: 10px 16px;
-  font-size: 15px;
-  font-weight: bold;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-#copyBtn { background: #0984e3; }
-#renameBtn { background: #6c5ce7; }
-#deleteTableBtn { background: #d63031; }
-#saveLayoutBtn { background: #00b894; }
-#exportBtn { background: #2d3436; }
-
-@media (max-width: 768px) {
-  #desktopActions {
-    display: none !important;
-  }
-}
 /* BÀN */
 .table {
   position:absolute;
@@ -245,6 +208,47 @@ body { font-family: Arial; background:#f1f2f6; overflow-x: hidden;  /* BẮT BU�
   width: 100% !important;
 }
 
+#desktopActions {
+  position: fixed;
+  top: 120px;
+  right: 12px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  padding: 10px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+#desktopActions button {
+  width: 190px;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: bold;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#copyBtn { background: #0984e3; }
+#renameBtn { background: #6c5ce7; }
+#deleteTableBtn { background: #d63031; }
+#saveLayoutBtn { background: #00b894; }
+#saveWeekdayLayoutBtn { background: #16a085; }
+#saveSaturdayLayoutBtn { background: #8e44ad; }
+#exportBtn { background: #2d3436; }
+
+@media (max-width: 768px) {
+  #desktopActions {
+    display: none !important;
+  }
+}
+
 </style>
 
 </head>
@@ -288,9 +292,12 @@ body { font-family: Arial; background:#f1f2f6; overflow-x: hidden;  /* BẮT BU�
   <button onclick="copySelectedTable()" id="copyBtn">Copy bàn</button>
   <button onclick="renameSelectedTable()" id="renameBtn">Sửa số bàn</button>
   <button onclick="deleteSelectedTable()" id="deleteTableBtn">Xóa bàn</button>
-  <button onclick="saveLayoutToDB()" id="saveLayoutBtn">Lưu tọa độ</button>
+  <button onclick="saveLayoutToDB()" id="saveLayoutBtn">Lưu tọa độ ngày này</button>
+  <button onclick="saveWeekdayLayoutToDB()" id="saveWeekdayLayoutBtn">Lưu layout ngày thường</button>
+  <button onclick="saveSaturdayLayoutToDB()" id="saveSaturdayLayoutBtn">Lưu layout thứ 7</button>
   <button onclick="exportTables()" id="exportBtn">Xuất tọa độ</button>
 </div>
+
   
 <!-- POPUP -->
 <div id="popup">
@@ -490,7 +497,7 @@ renderTables();
   /* ===== LAYOUT DATA SOURCE =====
      Thứ tự load:
      1) daily_table_layouts theo ngày đang chọn
-     2) default_table_layouts
+     2) default_table_layouts theo loại ngày (weekday / saturday)
      3) mảng hard-code trong file
   ===== */
 
@@ -501,6 +508,13 @@ renderTables();
   function getBanInFilter(values) {
     if (!values || values.length === 0) return '("")';
     return `(${values.map(v => `"${String(v).replace(/"/g, '\"')}"`).join(",")})`;
+  }
+
+  function getLayoutTypeByDate(dateValue) {
+    const normalized = getNormalizedDate(dateValue);
+    const date = new Date(normalized + "T00:00:00");
+    const day = date.getDay();
+    return day === 6 ? "saturday" : "weekday";
   }
 
   function getNextTableNumber() {
@@ -520,6 +534,7 @@ renderTables();
 
   async function loadLayoutFromDB(dateValue) {
     const targetDate = getNormalizedDate(dateValue);
+    const layoutType = getLayoutTypeByDate(targetDate);
 
     try {
       const { data: dailyData, error: dailyError } = await supabaseClient
@@ -543,6 +558,7 @@ renderTables();
       const { data: defaultData, error: defaultError } = await supabaseClient
         .from("default_table_layouts")
         .select("*")
+        .eq("layout_type", layoutType)
         .order("ban", { ascending: true });
 
       if (defaultError) throw defaultError;
@@ -553,6 +569,25 @@ renderTables();
           Number(row.y),
           Number(row.x)
         ]);
+
+        const payloadDaily = tables.map(t => ({
+          ngay: targetDate,
+          ban: String(t[0]),
+          y: Math.round(t[1]),
+          x: Math.round(t[2]),
+          width: 75,
+          height: 55,
+          updated_at: new Date().toISOString()
+        }));
+
+        const { error: seedDailyError } = await supabaseClient
+          .from("daily_table_layouts")
+          .upsert(payloadDaily, { onConflict: "ngay,ban" });
+
+        if (seedDailyError) throw seedDailyError;
+
+        renderTables();
+        return;
       }
 
       renderTables();
@@ -576,15 +611,6 @@ renderTables();
         updated_at: new Date().toISOString()
       }));
 
-      const payloadDefault = tables.map(t => ({
-        ban: String(t[0]),
-        y: Math.round(t[1]),
-        x: Math.round(t[2]),
-        width: 75,
-        height: 55,
-        updated_at: new Date().toISOString()
-      }));
-
       const currentBans = tables.map(t => String(t[0]));
       const banFilter = getBanInFilter(currentBans);
 
@@ -596,29 +622,88 @@ renderTables();
 
       if (dailyDeleteError) throw dailyDeleteError;
 
-      const { error: defaultDeleteError } = await supabaseClient
-        .from("default_table_layouts")
-        .delete()
-        .not("ban", "in", banFilter);
-
-      if (defaultDeleteError) throw defaultDeleteError;
-
       const { error: dailyUpsertError } = await supabaseClient
         .from("daily_table_layouts")
         .upsert(payloadDaily, { onConflict: "ngay,ban" });
 
       if (dailyUpsertError) throw dailyUpsertError;
 
-      const { error: defaultUpsertError } = await supabaseClient
-        .from("default_table_layouts")
-        .upsert(payloadDefault, { onConflict: "ban" });
-
-      if (defaultUpsertError) throw defaultUpsertError;
-
-      alert(`Đã lưu tọa độ cho ngày ${targetDate} và cập nhật layout mặc định!`);
+      alert(`Đã lưu tọa độ cho ngày ${targetDate}.`);
     } catch (err) {
-      console.error("Lỗi lưu layout:", err);
+      console.error("Lỗi lưu layout ngày:", err);
       alert("Lưu tọa độ thất bại: " + err.message);
+    }
+  }
+
+  async function saveWeekdayLayoutToDB() {
+    try {
+      const payload = tables.map(t => ({
+        layout_type: "weekday",
+        ban: String(t[0]),
+        y: Math.round(t[1]),
+        x: Math.round(t[2]),
+        width: 75,
+        height: 55,
+        updated_at: new Date().toISOString()
+      }));
+
+      const currentBans = tables.map(t => String(t[0]));
+      const banFilter = getBanInFilter(currentBans);
+
+      const { error: deleteError } = await supabaseClient
+        .from("default_table_layouts")
+        .delete()
+        .eq("layout_type", "weekday")
+        .not("ban", "in", banFilter);
+
+      if (deleteError) throw deleteError;
+
+      const { error: upsertError } = await supabaseClient
+        .from("default_table_layouts")
+        .upsert(payload, { onConflict: "layout_type,ban" });
+
+      if (upsertError) throw upsertError;
+
+      alert("Đã lưu layout ngày thường.");
+    } catch (err) {
+      console.error("Lỗi lưu layout ngày thường:", err);
+      alert("Lưu layout ngày thường thất bại: " + err.message);
+    }
+  }
+
+  async function saveSaturdayLayoutToDB() {
+    try {
+      const payload = tables.map(t => ({
+        layout_type: "saturday",
+        ban: String(t[0]),
+        y: Math.round(t[1]),
+        x: Math.round(t[2]),
+        width: 75,
+        height: 55,
+        updated_at: new Date().toISOString()
+      }));
+
+      const currentBans = tables.map(t => String(t[0]));
+      const banFilter = getBanInFilter(currentBans);
+
+      const { error: deleteError } = await supabaseClient
+        .from("default_table_layouts")
+        .delete()
+        .eq("layout_type", "saturday")
+        .not("ban", "in", banFilter);
+
+      if (deleteError) throw deleteError;
+
+      const { error: upsertError } = await supabaseClient
+        .from("default_table_layouts")
+        .upsert(payload, { onConflict: "layout_type,ban" });
+
+      if (upsertError) throw upsertError;
+
+      alert("Đã lưu layout thứ 7.");
+    } catch (err) {
+      console.error("Lỗi lưu layout thứ 7:", err);
+      alert("Lưu layout thứ 7 thất bại: " + err.message);
     }
   }
 
@@ -660,7 +745,7 @@ renderTables();
     const index = parseInt(el.dataset.index, 10);
     const ban = String(tables[index][0]);
 
-    if (!confirm(`Xóa bàn ${ban} khỏi layout ngày ${currentDate} và layout mặc định?`)) return;
+    if (!confirm(`Xóa bàn ${ban} khỏi layout hiện tại?`)) return;
 
     try {
       const hasBookingToday = await supabaseClient
@@ -688,89 +773,87 @@ renderTables();
     }
   }
 
-async function renameSelectedTable() {
-  if (selected.length !== 1) {
-    alert("Vui lòng chọn đúng 1 bàn để sửa số/tên.");
-    return;
-  }
-
-  const el = selected[0];
-  const index = parseInt(el.dataset.index, 10);
-  const oldBan = String(tables[index][0]);
-
-  const newBanRaw = prompt("Nhập số/tên bàn mới:", oldBan);
-  if (newBanRaw === null) return;
-
-  const newBan = newBanRaw.trim();
-  if (!newBan) {
-    alert("Số/tên bàn không được để trống.");
-    return;
-  }
-
-  if (newBan === oldBan) return;
-
-  const existed = tables.some((t, i) => i !== index && String(t[0]) === newBan);
-  if (existed) {
-    alert(`Bàn ${newBan} đã tồn tại.`);
-    return;
-  }
-
-  const confirmRename = confirm(
-    `Đổi bàn ${oldBan} thành ${newBan} chỉ trên layout.\nBooking đã lưu sẽ không đổi. Tiếp tục không?`
-  );
-  if (!confirmRename) return;
-
-  try {
-    saveState();
-
-    // Đổi tên bàn trong mảng layout hiện tại
-    tables[index][0] = newBan;
-    renderTables();
-    clearSelectedTables();
-
-    // Select lại bàn vừa đổi tên
-    const renamedEl = document.querySelector(`[data-ban='${CSS.escape(newBan)}']`);
-    if (renamedEl) {
-      renamedEl.classList.add("selected");
-      selected = [renamedEl];
+  async function renameSelectedTable() {
+    if (selected.length !== 1) {
+      alert("Vui lòng chọn đúng 1 bàn để sửa số/tên.");
+      return;
     }
 
-    // Chỉ cập nhật layout của ngày đang chọn nếu ngày đó đã có record
-    const targetDate = getNormalizedDate(document.getElementById("datePicker").value || currentDate);
+    const el = selected[0];
+    const index = parseInt(el.dataset.index, 10);
+    const oldBan = String(tables[index][0]);
 
-    // Xóa record layout cũ theo ngày hiện tại
-    const { error: dailyDeleteError } = await supabaseClient
-      .from("daily_table_layouts")
-      .delete()
-      .eq("ngay", targetDate)
-      .eq("ban", oldBan);
+    const newBanRaw = prompt("Nhập số/tên bàn mới:", oldBan);
+    if (newBanRaw === null) return;
 
-    if (dailyDeleteError) throw dailyDeleteError;
+    const newBan = newBanRaw.trim();
+    if (!newBan) {
+      alert("Số/tên bàn không được để trống.");
+      return;
+    }
 
-    // Upsert record layout mới theo ngày hiện tại
-    const { error: dailyUpsertError } = await supabaseClient
-      .from("daily_table_layouts")
-      .upsert([{
-        ngay: targetDate,
-        ban: newBan,
-        y: Math.round(tables[index][1]),
-        x: Math.round(tables[index][2]),
-        width: 75,
-        height: 55,
-        updated_at: new Date().toISOString()
-      }], { onConflict: "ngay,ban" });
+    if (newBan === oldBan) return;
 
-    if (dailyUpsertError) throw dailyUpsertError;
+    const existed = tables.some((t, i) => i !== index && String(t[0]) === newBan);
+    if (existed) {
+      alert(`Bàn ${newBan} đã tồn tại.`);
+      return;
+    }
 
-    alert(`Đã đổi tên bàn trên layout từ ${oldBan} thành ${newBan}. Booking không thay đổi.`);
-  } catch (err) {
-    console.error("Lỗi đổi số bàn:", err);
-    alert("Đổi số/tên bàn thất bại: " + err.message);
+    const confirmRename = confirm(
+      `Đổi bàn ${oldBan} thành ${newBan} chỉ trên layout.
+Booking đã lưu sẽ không đổi. Tiếp tục không?`
+    );
+    if (!confirmRename) return;
+
+    try {
+      saveState();
+
+      tables[index][0] = newBan;
+      renderTables();
+      clearSelectedTables();
+
+      const renamedEl = document.querySelector(`[data-ban='${CSS.escape(newBan)}']`);
+      if (renamedEl) {
+        renamedEl.classList.add("selected");
+        selected = [renamedEl];
+      }
+
+      const targetDate = getNormalizedDate(document.getElementById("datePicker").value || currentDate);
+
+      const { error: dailyDeleteError } = await supabaseClient
+        .from("daily_table_layouts")
+        .delete()
+        .eq("ngay", targetDate)
+        .eq("ban", oldBan);
+
+      if (dailyDeleteError) throw dailyDeleteError;
+
+      const { error: dailyUpsertError } = await supabaseClient
+        .from("daily_table_layouts")
+        .upsert([{
+          ngay: targetDate,
+          ban: newBan,
+          y: Math.round(tables[index][1]),
+          x: Math.round(tables[index][2]),
+          width: 75,
+          height: 55,
+          updated_at: new Date().toISOString()
+        }], { onConflict: "ngay,ban" });
+
+      if (dailyUpsertError) throw dailyUpsertError;
+
+      alert(`Đã đổi tên bàn trên layout từ ${oldBan} thành ${newBan}. Booking không thay đổi.`);
+    } catch (err) {
+      console.error("Lỗi đổi số bàn:", err);
+      alert("Đổi số/tên bàn thất bại: " + err.message);
+    }
   }
-}
 
   window.copySelectedTable = copySelectedTable;
   window.saveLayoutToDB = saveLayoutToDB;
+  window.saveWeekdayLayoutToDB = saveWeekdayLayoutToDB;
+  window.saveSaturdayLayoutToDB = saveSaturdayLayoutToDB;
   window.deleteSelectedTable = deleteSelectedTable;
   window.renameSelectedTable = renameSelectedTable;
 
@@ -1099,10 +1182,10 @@ document.addEventListener("keydown", function(e){
   let dx = 0, dy = 0;
 
   switch(e.key){
-    case "ArrowUp": dy = -1; break;
-    case "ArrowDown": dy = 1; break;
-    case "ArrowLeft": dx = -1; break;
-    case "ArrowRight": dx = 1; break;
+    case "ArrowUp": dy = -10; break;
+    case "ArrowDown": dy = 10; break;
+    case "ArrowLeft": dx = -10; break;
+    case "ArrowRight": dx = 10; break;
     default: return;
   }
 
@@ -1191,36 +1274,21 @@ function normalizeTime(input){
 
   return input;
 }
-  
-function normalizeVietnamese(str) {
-  return (str || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "d")
-    .trim();
-}
-  
 function searchTable(){
-  let keyword = document.getElementById("searchInput").value.trim();
+  let keyword = document.getElementById("searchInput").value.toLowerCase().trim();
 
-  if (keyword === "") {
+  // Nếu rỗng → reset toàn bộ
+  if(keyword === ""){
     clearSearch();
     return;
   }
 
-  const normalizedKeyword = normalizeVietnamese(keyword);
-  const normalizedTime = normalizeVietnamese(normalizeTime(keyword));
+  const normalized = normalizeTime(keyword);
 
   document.querySelectorAll(".table").forEach(el => {
-    const rawText = el.innerText || "";
-    const normalizedText = normalizeVietnamese(rawText);
+    const text = el.innerText.toLowerCase();
 
-    if (
-      normalizedText.includes(normalizedKeyword) ||
-      normalizedText.includes(normalizedTime)
-    ) {
+    if(text.includes(keyword) || text.includes(normalized)){
       el.style.opacity = "1";
       el.style.outline = "4px solid yellow";
     } else {
