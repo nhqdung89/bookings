@@ -1346,21 +1346,36 @@ function normalizeTime(input){
 
   return input;
 }
-function searchTable(){
-  let keyword = document.getElementById("searchInput").value.toLowerCase().trim();
 
-  // Nếu rỗng → reset toàn bộ
-  if(keyword === ""){
+function normalizeVietnamese(str) {
+  return (str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "d")
+    .trim();
+}
+  
+function searchTable(){
+  let keyword = document.getElementById("searchInput").value.trim();
+
+  if (keyword === "") {
     clearSearch();
     return;
   }
 
-  const normalized = normalizeTime(keyword);
+  const normalizedKeyword = normalizeVietnamese(keyword);
+  const normalizedTime = normalizeVietnamese(normalizeTime(keyword));
 
   document.querySelectorAll(".table").forEach(el => {
-    const text = el.innerText.toLowerCase();
+    const rawText = el.innerText || "";
+    const normalizedText = normalizeVietnamese(rawText);
 
-    if(text.includes(keyword) || text.includes(normalized)){
+    if (
+      normalizedText.includes(normalizedKeyword) ||
+      normalizedText.includes(normalizedTime)
+    ) {
       el.style.opacity = "1";
       el.style.outline = "4px solid yellow";
     } else {
@@ -1369,6 +1384,7 @@ function searchTable(){
     }
   });
 }
+  
 function clearSearch(){
   document.getElementById("searchInput").value = "";
 
